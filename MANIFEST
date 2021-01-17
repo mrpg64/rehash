@@ -238,6 +238,7 @@ plugins/Messages/dump
 plugins/Messages/message_delete.pl
 plugins/Messages/message_delivery.pl
 plugins/Messages/messages.pl
+plugins/Messages/messages.js
 plugins/Messages/mysql_schema
 plugins/Messages/templates/dailyheadlines;messages;default
 plugins/Messages/templates/dailynews;messages;default
@@ -360,6 +361,7 @@ themes/slashcode/tasks/new_motd.pl
 themes/slashcode/tasks/open_backend.pl
 themes/slashcode/tasks/p2f_hof_topics.pl
 themes/slashcode/tasks/refresh_authors_cache.pl
+themes/default/tasks/rotate_comment_readlog.pl
 themes/slashcode/tasks/run_moderatord.pl
 themes/slashcode/tasks/run_portald.pl
 themes/slashcode/tasks/set_recent_topics.pl

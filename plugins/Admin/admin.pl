@@ -465,7 +465,7 @@ sub templateEdit {
 
 	$templateref = $slashdb->getTemplate($tpid, '', 1) if $tpid;
 
-	$seclev_flag = 0 if $templateref->{seclev} > $user->{seclev};
+	$seclev_flag = 0 if defined($templateref->{seclev}) && $templateref->{seclev} > $user->{seclev};
 
 	if ($form->{templatedelete}) {
 		$templatedelete_flag = 1;
@@ -1189,7 +1189,11 @@ sub editStory {
 			$storyref->{$field} = balanceTags($storyref->{$field});
 			# This should be moved to balanceTags once that braindead POS is fixed -- paulej72 20150617
 			$storyref->{$field} =~ s|</p>|</p>\n\n|g;
+			$storyref->{$field} =~ s|</li>|</li>\n|g;
+			$storyref->{$field} =~ s|</ol>|</ol>\n\n|g;
+			$storyref->{$field} =~ s|</ul>|</ul>\n\n|g;
 			$storyref->{$field} =~ s|</blockquote>|</blockquote>\n\n|g;
+			$storyref->{$field} =~ s|</spoiler>|</spoiler>\n\n|g;			
 			$storyref->{$field} =~ s|(</?h.>)\s*</p>|$1|g;
 		}
 
@@ -1250,6 +1254,18 @@ sub editStory {
 		$storyref->{is_dirty} = 1;
 		$storyref->{commentstatus} = ($slashdb->getDiscussion($storyref->{discussion}, 'commentstatus') || 'disabled'); # If there is no discussion attached then just disable -Brian
 		$user->{currentSkin} = $tmp;
+		
+		for my $field (qw( introtext bodytext )) {
+			# This should be moved to balanceTags once that braindead POS is fixed -- paulej72 20150617
+			$storyref->{$field} =~ s|</p>|</p>\n\n|g;
+			$storyref->{$field} =~ s|</li>|</li>\n|g;
+			$storyref->{$field} =~ s|</ol>|</ol>\n\n|g;
+			$storyref->{$field} =~ s|</ul>|</ul>\n\n|g;
+			$storyref->{$field} =~ s|</blockquote>|</blockquote>\n\n|g;
+			$storyref->{$field} =~ s|</spoiler>|</spoiler>\n\n|g;
+			$storyref->{$field} =~ s|(</?h.>)\s*</p>|$1|g;
+		}
+		
 		# Get wordcounts
 		$storyref->{introtext_wordcount} = countWords($storyref->{introtext});
 		$storyref->{bodytext_wordcount} = countWords($storyref->{bodytext});
@@ -1898,10 +1914,6 @@ sub updateStory {
 		my $data = {};
 		if ($warn_skids{$st->{primaryskid}}) {
 			$data->{warn_skid} = $st->{primaryskid};
-			if ($constants->{plugin}{Remarks}) {
-				my $remarks = getObject("Slash::Remarks");
-				$remarks->createRemark("WARNING: $st->{sid} has a primaryskid of $st->{primaryskid}", { type => 'system' });
-			}
 		}
 		titlebar('100%', getTitle('updateStory-title', $data));
 
@@ -2400,10 +2412,6 @@ sub saveStory {
 		my $data = {};
 		if ($warn_skids{$st->{primaryskid}}) {
 			$data->{warn_skid} = $st->{primaryskid};
-			if ($constants->{plugin}{Remarks}) {
-				my $remarks = getObject("Slash::Remarks");
-				$remarks->createRemark("WARNING: $st->{sid} has a primaryskid of $st->{primaryskid}", { type => 'system' });
-			}
 		}
 		titlebar('100%', getTitle('saveStory-title', $data) );
 		$slashdb->createSignoff($stoid, $user->{uid}, "saved");

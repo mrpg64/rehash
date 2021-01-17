@@ -11,7 +11,6 @@ min-width: 720px;
 color: #000;
 position: relative;
 font-size:100%;
-overflow: wrap;
 word-wrap: break-word;
 }
 
@@ -307,6 +306,11 @@ position: relative;
 overflow-y: hidden;
 }
 
+#slashboxes #related-content {
+	overflow-y: auto;
+	max-height: 150px;
+}
+
 #slashboxes h4 img.map
 {
 position: absolute;
@@ -582,10 +586,23 @@ overflow-y: hidden;
 	border-left-color: rgba(0,0,0, 0.2);
 }
 
-.article blockquote p,  .article .quote p {
+.article blockquote p,
+.article blockquote div, 
+.article .quote p
+{
 	margin: 0;
 	padding-top: .5em;
 	padding-bottom: .5em;
+}
+
+.article blockquote div p:first-child
+{
+	padding-top: 0;
+}
+
+.article blockquote div p:last-child
+{
+	padding-bottom: 0;
 }
 
 .article .details strong
@@ -632,6 +649,7 @@ input[type=checkbox].story_more:checked ~ div.story_more{
 input[type=checkbox].story_more ~ label.story_more{
     padding: 0;
     cursor: pointer;
+    font-weight: unset;
 }
 
 input[type=checkbox].story_more:checked ~ label.story_more{
@@ -1056,4 +1074,74 @@ div.modalprefhelp {
         width: 300px;
         border-style: solid;
         border-width: 2px;
+}
+
+abbr {
+	text-decoration: none;
+	border-bottom: 1px dotted #000;
+}
+
+/* Spoilers */
+
+blockquote.spoiler input[type=checkbox].spoiler ~ label
+{
+    display: block;
+    padding: 0.2em .1em;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+blockquote.spoiler input[type=checkbox].spoiler,
+blockquote.spoiler input[type=checkbox].spoiler ~ label.spoiler_on,
+div.spoiler_text
+{
+	display:none;
+}
+
+blockquote.spoiler input[type=checkbox].spoiler:checked ~ label.spoiler_off
+{
+	display:none;
+}
+
+blockquote.spoiler input[type=checkbox].spoiler:checked ~ label.spoiler_on,
+blockquote.spoiler input[type=checkbox].spoiler:checked ~ div.spoiler_text
+{
+	display:block;
+}
+
+body blockquote.spoiler {
+	background: linear-gradient(to right, rgba(0, 0, 0, 0.3), transparent 60%);
+}
+
+
+
+#sabutton {
+	display: none;
+}
+
+.purchasesubscription legend + p {
+	margin-top: 0;
+}
+
+.purchasesubscription__type, .purchasesubscription__duration {
+	list-style: none;
+	padding: 0;
+	margin: 0:
+}
+
+.purchasesubscription__duration {
+	display: table;
+}
+
+.purchasesubscription__duration li {
+	display: table-row;
+}
+
+.purchasesubscription__duration li input, .purchasesubscription__duration li span {
+	text-align: right;
+}
+
+.purchasesubscription__duration li input, .purchasesubscription__duration li span {
+	display: table-cell;
+	padding: 0 0.2em;
 }

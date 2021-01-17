@@ -41,6 +41,7 @@ __template__
 	[% del = submission.del; submission_state.$del %] submission by <b>[% submission.name %] <a href="[% submission.email %]">[% submission.email %]</a></b>
         	at [% submission.time %]
 	[% END -%]
+	[% IF constants.use_dept && constants.submit_dept && submission.dept %]<strong>from the <b>[% submission.dept | strip_subject %]</b> dept.</strong>[% END %]
 	</div>
 	<div class="body">
 		<div class="topic">
@@ -51,12 +52,12 @@ __template__
 		thisjournal = journal.get(submission.journal_id);
 		IF thisjournal && thisjournal.uid;
 			thisuser    = Slash.db.getUser(thisjournal.uid); %]
-			<p>This submission comes from <a href="[% constants.rootdir %]/~[% thisuser.nickname | strip_paramattr %]/journal/">[% thisuser.nickname | strip_literal %] ([% thisjournal.uid %])'s journal</a></p>
+			<p>This submission comes from <a href="[% constants.rootdir %]/~[% thisuser.nickname | fixnickforlink | strip_paramattr %]/journal/">[% thisuser.nickname | strip_literal %] ([% thisjournal.uid %])'s journal</a></p>
 		[% END;
 	END %]
 		[% pretext = Slash.addDomainTags(subtext);
 			pretext = Slash.parseDomainTags(pretext); %]
-		[% pretext %]
+		[% pretext | apply_rehash_tags %]
 	</div>
 </div>
 </p>
@@ -104,7 +105,7 @@ __template__
 			</b> at [% submission.time %] <a href="[% gSkin.rootdir %]/users.pl?op=userinfo&amp;userfield=[% ipid %]&amp;fieldname=ipid">[% ipid_vis %]</a><br>
 			<br>
 			<label>Editors' Notes</label>
-			<textarea class="fullbox" wrap="virtual" maxlength="1023" name="comment_[% subid | strip_attribute %]" cols="[% user.textarea_cols || constants.textarea_cols %]" rows="3">[% submission.comment | strip_textarea %]</textarea>
+			<textarea class="fullbox" wrap="virtual" name="comment_[% subid | strip_attribute %]" cols="[% user.textarea_cols || constants.textarea_cols %]" rows="3">[% submission.comment | strip_textarea %]</textarea>
 	
 			[% 
 				this_note = submission.note || '';
@@ -119,7 +120,9 @@ __template__
 			%]
 		
 			<input type="submit" name="update" value="Update">
-			<input type="submit" name="del_[% subid %]" value="Delete"> Reason <input type="text" name="rejectreason">
+			<br /><br/>
+			<input type="submit" name="del_[% subid %]" value="Delete"> 
+			Reason: <textarea class="fullbox" wrap="virtual" name="rejectreason" cols="[% user.textarea_cols || constants.textarea_cols %]" rows="3"></textarea>
 		</fieldset>
 	</form>
 
@@ -134,12 +137,12 @@ __template__
 			<input type="hidden" name="topic_source" value="submission">
 			<input type="hidden" name="submitter" value="[% submitter.uid %]">
 			<label>Editors' Notes</label>
-			<textarea class="fullbox" wrap="virtual" maxlength="1023" name="notes" cols="[% user.textarea_cols || constants.textarea_cols %]" rows="3">[% submission.comment | strip_textarea %]</textarea>
+			<textarea class="fullbox" wrap="virtual" name="notes" cols="[% user.textarea_cols || constants.textarea_cols %]" rows="3">[% submission.comment | strip_textarea %]</textarea>
 	
 			<label>Title&nbsp; <input type="text" name="title" value="[% submission.subj | strip_subject %]" size="75" MAXLENGTH="100"></label>
 			[% lockTest %]
 			[% IF constants.use_dept %]
-				<label>Dept&nbsp; <input type="text" name="dept" size="75" MAXLENGTH="100"></label>
+				<label>Dept&nbsp; <input type="text" name="dept" value="[% IF constants.submit_dept; submission.dept | strip_subject; END %]" size="75" MAXLENGTH="100"></label>
 			[% END %]
 			[% FOR extra = extras %]
 				<br>[% extra.1 %]

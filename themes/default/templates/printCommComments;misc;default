@@ -43,7 +43,7 @@ __template__
 
 [% IF cid %]
 	<ul id="commentlisting" class="[% user.mode %] d1">
-	[% Slash.dispComment(comment) %]
+	[% Slash.dispComment(comment).data %]
 	<div class="comment_footer">
 	[% IF previous %]
 		&lt;&lt;[% Slash.linkComment(previous, 1) %]
@@ -65,20 +65,6 @@ __template__
 		[% Slash.linkComment(next, 1) %]&gt;&gt;
 	[% END %]
 	</div>
-	[% UNLESS constants.modal_prefs_active;
-	   m1_classname = "Slash::" _ constants.m1_pluginname;
-	   moddb = Slash.getObject(m1_classname);
-	   IF moddb;
-		   moddb.dispModCommentLog('cid', cid, {
-			show_m2s =>	  constants.m2 ? (form.show_m2s.defined
-							? form.show_m2s : user.m2_with_comm_mod)
-						: 0,
-			need_m2_form =>	  constants.m2 ? !moderate_form : 0,
-			need_m2_button => constants.m2,
-			title => " " });
-	   END;
-	   END; # constants.modal_prefs_active
-	%]
 [% END %]
 
 	[% lcp %]
@@ -99,20 +85,20 @@ __template__
 <div id="discussion_buttons">
 
 [% IF !user.state.discussion_archived && !user.state.discussion_future_nopost %]
-<span class="nbutton"><p><b>[% Slash.linkComment({
+<span class="nbutton"><b>[% Slash.linkComment({
 	sid          => sid,
 	cid          => cid,
 	op           => 'reply',
 	subject      => 'Reply',
 	subject_only => 1,
-}) %]</b></p></span>
+}) %]</b></span>
 [% END %]
 
 [% IF !user.is_anon %]
-<span class="nbutton"><p><b><a href="[% gSkin.rootdir %]/my/comments"[% IF constants.modal_prefs_active %] onclick="getModalPrefs('d2', 'Discussion 2', 1); return false"[% END %]>Prefs</a></b></p></span>[% END %]
+<span class="nbutton"><b><a href="[% gSkin.rootdir %]/my/comments">Prefs</a></b></span>[% END %]
 
 [% IF (can_moderate || user.acl.candelcomments_always) %]
-<span class="nbutton"><p><b><a href="[% gSkin.rootdir %]/faq.pl?op=moderation">Moderator Help</a></b></p></span>[% END %]
+<span class="nbutton"><b><a href="[% gSkin.rootdir %]/faq.pl?op=moderation">Moderator Help</a></b></span>[% END %]
 
 [% IF moderate_form %]
 	[% IF moderate_button %]
@@ -122,14 +108,13 @@ __template__
 		<input type="hidden" name="pid" value="[% pid %]">
 		<button type="submit" name="moderate" value="discussion_buttons">Moderate</button>
 		[% IF can_del %]
-			<span class="nbutton"><p><b><a href="#" onclick="$('#commentform').submit(); return false">Delete</a></b></p></span>
+			<span class="nbutton"><b><a href="#" onclick="$('#commentform').submit(); return false">Delete</a></b></span>
 			Checked comments will be deleted!
 		[% END %]
 	[% END %]
 [% END %]
 </div>
 [% IF moderate_form %]	</form>[% END %]
-[% PROCESS collapsibleCommentsJS %]
 __seclev__
 10000
 __version__

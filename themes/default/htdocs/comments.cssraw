@@ -84,9 +84,9 @@ html > body .commentwrap table {
 	background:#aaa;
 }
 
-.commentTop a, .commentTop a:hover {
+.commentTop a, .commentTop a:hover, .commentTop a:visited {
 	color: #fff;
-	text-decoration: none;
+  text-decoration: none;
 }
 
 .sict_closed {
@@ -106,12 +106,23 @@ html > body .commentwrap table {
 {
 	color: #fff;
 	display: block;
-	padding: .3em .6em .3em 55px;
+	padding: .3em .6em .3em 93px;
 	overflow-y: hidden;
+}
+
+.commentTop .title h4.noJS
+{
+  padding-left: 65px;
+}
+
+.commentTop .title h4.noTH
+{
+  padding-left: 37px;
 }
 
 .commentTop .title h4 .score,
 .commentTop .title h4 .by,
+.commentTop .title h4 span.commentTreeHider,
 .commentTop .title h4 .spam{
 	font-size: .85em;
 }
@@ -119,6 +130,12 @@ html > body .commentwrap table {
 .commentTop .title h4 .spam
 {
   float: right;	
+}
+
+.commentTop .title h4 .newBadge
+{
+  float: right;	
+	padding-left: 1em;
 }
 
 .commentTop .details {
@@ -159,7 +176,7 @@ html > body .commentwrap table {
 	padding: 1em .8em .1em .8em;
 	background: #fff;
 	font-size: .875em;
-	overflow-y: hidden;
+
 }
 
 .generalbody .commentBody {
@@ -179,17 +196,6 @@ html > body .commentwrap table {
 	font-size:0.875em;
 }
 
-
-#commentlisting .commentBody ul
-{
-	border-left: none;
-}
-
-#commentlisting .commentBody ul li
-{
-	list-style:none outside none;
-}
-
 .commentshrunk, .commentstatus, .commentload { font-weight: bold }
 
 .commentBody blockquote, .commentBody .quote {
@@ -205,37 +211,50 @@ html > body .commentwrap table {
 	border-left-color: rgba(0,0,0, 0.4);
 }
 
-.commentBody blockquote p, .commentBody .quote p{
+.commentBody blockquote p,
+.commentBody blockquote div, 
+.commentBody .quote p
+{
 	padding-top: 0.25em;
 	padding-bottom: 0.25em;
+}
+
+.commentBody blockquote div p:first-child
+{
+	padding-top: 0;
+}
+
+.commentBody blockquote div p:last-child
+{
+	padding-bottom: 0;
 }
 
 #commentlisting {
 	padding: 0px;
 	margin: 0px;
 	list-style: none;
+	margin-bottom: .5em;
 }
-.comment { margin-bottom: 0.5em }
 
-.preview li.comment
+.comment {
+	margin-bottom: 0.5em;
+	list-style-type: none;
+}
+
+#previewComment .preview
 {
 	border-bottom: 1px solid #ddd;
 }
 
-#commentlisting ul 
+#commentlisting ul.commtree 
 {
-	border-left: 1px solid #ddd;
+	border-left: 1px solid #aaa;
 	padding-left: 1.2em;
 	margin-top:0;
 	margin-bottom:.5em;
 }
 
-ul#commentlisting 
-{
-	margin-bottom: .5em;
-}
-
-#commentlisting ul li
+#commentlisting ul.commtree>li
 {
 	list-style: none;
 	padding-top: .6em;
@@ -243,12 +262,23 @@ ul#commentlisting
 	margin-bottom:0;
 }
 
-#commentlisting .commentBody ol li{
-	list-style: decimal;
+#commentlisting .commentBody ol {
+	padding-bottom: .6em;
+	border-left: none;
 }
 
-#commentlisting .commentBody ul li{
-	list-style: disc;
+#commentlisting .commentBody ol li {
+	padding-top: 0px;
+}
+
+#commentlisting .commentBody ul {
+	padding-bottom: .6em;
+	border-left: none;
+	list-style-type: disc;
+}
+
+#commentlisting .commentBody ul li {
+	padding-top: 0px;
 }
 
 #discussion_buttons
@@ -277,13 +307,11 @@ ul#commentlisting
 	background: none;
 	margin:0;
 	white-space: nowrap;
-}
-.nbutton p{
 	display:inline;
 	padding: 0 0;
 }
 
-.nbutton p b a {
+.nbutton b a {
 	background: #555;
 	border-radius: .3em;
 	text-align:center;
@@ -297,10 +325,21 @@ ul#commentlisting
 
 
 /* Collapsible comments */
+.by {
+		display:none;
+}
 
-input.commentTreeHider:checked ~ label.commentHider
+input.commentTreeHider:checked~ div.commentDiv .by,
+input.commentHider:checked ~ div.commentDiv .by
 {
-	display:none;
+		display:inline
+}
+
+input.commentTreeHider:checked~ div.commentDiv h4,
+input.commentHider:checked ~ div.commentDiv h4,
+.commentbt h4
+{
+		font-weight: normal;
 }
 
 input.commentHider:checked ~ div.commentDiv div.commentBody,
@@ -328,6 +367,7 @@ input.commentTreeHider:checked ~ ul
 
 input.commentBelow:checked ~ label.commentHider,
 input.commentBelow:checked ~ label.commentTreeHider,
+input.commentBelow:checked ~ label.expandAll,
 input.commentBelow:checked ~ div.commentDiv
 {
 	display: none;
@@ -357,8 +397,6 @@ li.comment input[type=checkbox]:checked ~ div.commentDiv div.commentTop .title h
 li.comment input[type=checkbox]:checked ~ div.commentDiv div.commentTop .title h4 a
 {
   color: #000;
-	padding-top: 0;
-	padding-bottom: 0;
 }
 
 li.comment input.commentBelow,
@@ -367,31 +405,87 @@ li.comment input.commentTreeHider {
 	display:none;
 }
 
-li.comment input[type=checkbox] ~ label{
+li.comment input[type=checkbox].commentHider ~ label.commentHider,
+li.comment input[type=checkbox].commentBelow ~ label.commentBelow,
+li.comment input[type=checkbox].commentTreeHider ~ label.commentTreeHider,
+li.comment input[type="checkbox"] ~ label.expandAll{
+	background: url("[% constants.imagedir %]/minus.svg") no-repeat;
 	position:absolute;
-	width:16px;
-	margin-left:10px;
-	margin-top: .45em;
+	width:18px;
+	min-height: 18px;
+	padding-top: 0;
 	cursor: pointer;
-	background: url("//dev.soylentnews.org/images/chev1down.png"), no-repeat;
+	opacity: 0.9;
+	z-index: 3;
+	margin-top: .4em;
+	margin-left: 10px;
 }
 
 li.comment input[type=checkbox].commentTreeHider ~ label.commentTreeHider{
-  background: url("//dev.soylentnews.org/images/chev2down.png");
-	margin-left:28px;
+  background: url("[% constants.imagedir %]/minusminus.svg") no-repeat;
+	position:absolute;
+	margin-left: 37px;
 }
 
-li.comment input[type=checkbox]:checked ~ label{
-	background: url("//dev.soylentnews.org/images/chev1up.png");
-	margin-top: .15em;
+li.comment input[type=checkbox].commentHider:checked ~ label.commentHider,
+li.comment input[type=checkbox].commentBelow:checked ~ label.commentBelow{
+	background: url("[% constants.imagedir %]/plus.svg") no-repeat;
 }
 
 li.comment input[type=checkbox].commentTreeHider:checked ~ label.commentTreeHider{
-  background: url("//dev.soylentnews.org/images/chev2up.png");
-	margin-left:28px;
+  background: url("[% constants.imagedir %]/plusplus.svg") no-repeat;
+}
+
+li.comment input[type=checkbox].commentTreeHider:checked ~ label.commentHider
+{
+	opacity: 0.3;
+	pointer-events: none
+}
+
+.commentTop .title h4 label,
+.commentbt h4 label
+{
+	padding-top: 0;
+	display: inline;
+	cursor: pointer;
+	font-weight: inherit;
+}
+
+li.comment input[type=checkbox].commentTreeHider:checked ~ div.commentDiv div.commentTop .title h4 label.commentTreeHider,
+li.comment input[type=checkbox].commentTreeHider:checked ~ div.commentDiv div.commentTop .title h4 span.commentTreeHider
+{
+  display:inline;
+}
+
+.commentTop .title h4 label.commentTreeHider,
+.commentTop .title h4 span.commentTreeHider,
+li.comment input[type=checkbox].commentTreeHider:checked ~ div.commentDiv div.commentTop .title h4 label.commentHider
+{
+  display:none;
+}
+
+li.comment input[type="checkbox"] ~ label.expandAll {
+	background: url("[% constants.imagedir %]/plusplusplus.svg") no-repeat;
+	margin-left: 65px;
+}
+
+li.comment input[type="checkbox"] ~ label.noJS {
+	display: none;
+}
+
+.dimmed {
+	opacity: 0.75;
 }
 
 .noCollapse .commentTop .title h4
 {
 	padding-left: .6em;
+}
+
+#comments .nbutton, #article .nbutton, #pollBooth .nbutton, #journal .nbutton,
+#comments .button, #article .button, #pollBooth .button, #journal .button,
+#comments button, #article button, #pollBooth button, #journal button,
+#comments select, #article select, #pollBooth select, #journal .select
+{
+	margin-right: .5em
 }

@@ -41,6 +41,10 @@ sub main {
 			function	=> \&auth,
 			seclev		=> 1,
 		},
+		mod		=> {
+			function	=> \&mod,
+			seclev		=> 1,
+		},
 		default		=> {
 			function	=> \&nullop,
 			seclev		=> 1,
@@ -80,6 +84,26 @@ sub auth {
 	$op = 'default' unless $ops->{$op};
 
         return $ops->{$op}{function}->($form, $slashdb, $user, $constants, $gSkin);
+}
+
+sub mod {
+	my ($form, $slashdb, $user, $constants, $gSkin) = @_;
+	my $op = lc($form->{op});
+
+	my $ops = {
+		default		=> {
+			function	=> \&nullop,
+			seclev		=> 0,
+		},
+		reasons		=> {
+			function	=> \&getModReasons,
+			seclev		=> 0,
+		},
+	};
+
+	$op = 'default' unless $ops->{$op};
+
+	return $ops->{$op}{function}->($form, $slashdb, $user, $constants, $gSkin);
 }
 
 sub user {
@@ -432,6 +456,12 @@ sub getSingleJournal {
 	my $journal = $journal_reader->get($form->{id});
 	delete $journal->{srcid_32};
 	delete $journal->{srcid_24};
+	
+	$journal->{nickname} = $slashdb->sqlSelect(
+				'nickname',
+				'users',
+				" uid = $journal->{uid} ");
+	$journal->{link} = "$gSkin->{absolutedir}/~$journal->{nickname}/journal/$journal->{id}";
 
 	my $json = JSON->new->utf8->allow_nonref;
 	return $json->pretty->encode($journal);
@@ -458,7 +488,7 @@ sub getLatestJournals {
 					'introtext, article',
 					'journals_text',
 					" id = $id ");
-		($journals->{$id}->{introtext}, $journals->{$id}->{artice}) = @$texts;
+		($journals->{$id}->{introtext}, $journals->{$id}->{article}) = @$texts;
 		
 		push @$items, $journals->{$id};
 	}
@@ -522,7 +552,7 @@ sub getSingleComment {
 
 sub getDiscussion {
 	my ($form, $slashdb, $user, $constants, $gSkin) = @_;
-	my $discussion = $slashdb->getDiscussion($form->{id});
+	my $discussion = $slashdb->getDiscussion($form->{sid});
 	if (!$discussion || !$discussion->{commentcount} ||  $discussion->{commentstatus} eq 'disabled' ) { return; }
 
 	my($comments, $count) = selectComments($discussion);
@@ -715,6 +745,14 @@ sub genChosenHashrefForTopics {
 	return $chosen_hr;
 }
 
+sub getModReasons {
+	my ($form, $slashdb, $user, $constants, $gSkin) = @_;
+	my $json = JSON->new->utf8->allow_nonref;
+	my $wholeshebang = $slashdb->sqlSelectAllHashref("id", "id, name, val, ordered, needs_prior_mod", "modreasons", "id <> 100");
+
+
+	return $json->pretty->encode($wholeshebang);
+}
 #createEnvironment();
 main();
 1;

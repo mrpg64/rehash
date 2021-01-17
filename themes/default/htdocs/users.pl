@@ -404,6 +404,17 @@ sub main {
 		return;
 	}
 
+	if($op eq "savehome") {
+		$ops->{$op}->{function}->();
+		if($user->{is_admin} && $form->{uid} != $user->{uid}) {
+			redirect($constants->{real_rootdir}."/users.pl?op=admin&uid=$form->{uid}");
+		}
+		else {
+			redirect($constants->{real_rootdir}."/my/homepage");
+		}
+		return;
+	}
+
 	# Print the header and very top stuff on the page.  We have
 	# three ops that (may) end up routing into showInfo(), which
 	# needs to do some stuff before it calls header(), so for
@@ -773,13 +784,8 @@ sub showSubmissions {
 	my $constants = getCurrentStatic();
 	my $user = getCurrentUser();
 	my($uid, $nickname);
-
-	print createMenu("users", {
-		style		=> 'tabbed',
-		justify		=> 'right',
-		color		=> 'colored',
-		tab_selected	=> $hr->{tab_selected_1} || "",
-	});
+	my $admin_flag = ($user->{is_admin}) ? 1 : 0;
+	
 
 	if ($form->{uid} or $form->{nick}) {
 		$uid		= $form->{uid} || $reader->getUserUID($form->{nick});
@@ -788,19 +794,35 @@ sub showSubmissions {
 		$nickname	= $user->{nickname};
 		$uid		= $user->{uid};
 	}
+					
+	my $title = "Submissions of " . getTitle('userInfo_user_title', { nick => $nickname, uid => $uid });
+	
+	my $submissions = "";
+	my $pages = 0;
+	my $page = $form->{page} || 1;
+	my $count = ((($admin_flag || $user->{uid} == $uid) ? $constants->{submissions_all_page_size} : $constants->{submissions_accepted_only_page_size}) || "");
+	
+	my $sub_options->{accepted_only} = 1 if !$admin_flag && $user->{uid} != $uid;
 
-	my $storycount = $reader->countStoriesBySubmitter($uid);
-	my $stories = $reader->getStoriesBySubmitter(
-		$uid,
-		$constants->{user_submitter_display_default}
-	) unless !$storycount;
+	my $subcount = $reader->countSubmissionsByUID($uid, $sub_options);
+	
+	if ($subcount) {
+		$pages = int($subcount/$count) + 1;
+		my $sub_limit = (($page - 1) * $count) . ", " . $count;
+		$submissions = $reader->getSubmissionsByUID($uid, $sub_limit, $sub_options);
+	}
+	
 
 	slashDisplay('userSub', {
-		nick			=> $nickname,
-		uid			=> $uid,
+		nick							=> $nickname,
+		admin_flag				=> $admin_flag,
+		uid								=> $uid,
 		nickmatch_flag		=> ($user->{uid} == $uid ? 1 : 0),
-		stories 		=> $stories,
-		storycount 		=> $storycount,
+		submissions				=> $submissions,
+		subcount					=> $subcount,
+		page							=> $page,
+		pages							=> $pages,
+		title							=> $title,
 	});
 }
 
@@ -1323,9 +1345,6 @@ sub showInfo {
 
 		my $lastjournal = _get_lastjournal($uid);
 		
-		my $subcount = $reader->countSubmissionsByUID($uid);
-	
-		my $submissions = $reader->getSubmissionsByUID($uid, $sub_limit, $sub_options);
 		my $metamods;
 		if ($constants->{m2} && $admin_flag) {
 			my $metamod_reader = getObject('Slash::Metamod', { db_type => 'reader' });
@@ -1352,8 +1371,8 @@ sub showInfo {
 			hr_hours_back		=> $ipid_hoursback,
 			cids_to_mods		=> $cids_to_mods,
 			comment_time		=> $comment_time,
-			submissions		=> $submissions,
-			subcount		=> $subcount,
+			submissions		=> "",
+			subcount		=> 0,
 			metamods		=> $metamods,
 		});
 	}
@@ -2108,12 +2127,12 @@ sub editComm {
 		'bytelimit', $formats, $user_edit->{bytelimit}, 1
 	);
 
-	my $h_check  = $user_edit->{hardthresh}		 ? $constants->{markup_checked_attribute} : '';
-	my $r_check  = $user_edit->{reparent}		 ? $constants->{markup_checked_attribute} : '';
 	my $n_check  = $user_edit->{noscores}		 ? $constants->{markup_checked_attribute} : '';
 	my $s_check  = $user_edit->{nosigs}		 ? $constants->{markup_checked_attribute} : '';
 	my $b_check  = $user_edit->{nobonus}		 ? $constants->{markup_checked_attribute} : '';
 	my $p_check  = $user_edit->{postanon}		 ? $constants->{markup_checked_attribute} : '';
+	my $new_check = $user_edit->{highnew}            ? $constants->{markup_checked_attribute} : '';
+	my $dim_check = $user_edit->{dimread}            ? $constants->{markup_checked_attribute} : '';
 	my $nospell_check = $user_edit->{no_spell}	 ? $constants->{markup_checked_attribute} : '';
 	my $s_mod_check = $user_edit->{mod_with_comm}	 ? $constants->{markup_checked_attribute} : '';
 	my $s_m2_check = $user_edit->{m2_with_mod}	 ? $constants->{markup_checked_attribute} : '';
@@ -2128,12 +2147,12 @@ sub editComm {
 		title			=> $title,
 		admin_block		=> $admin_block,
 		user_edit		=> $user_edit,
-		h_check			=> $h_check,
-		r_check			=> $r_check,
 		n_check			=> $n_check,
 		s_check			=> $s_check,
 		b_check			=> $b_check,
 		p_check			=> $p_check,
+		new_check   => $new_check,
+		dim_check		=> $dim_check,
 		s_mod_check		=> $s_mod_check,
 		s_m2_check		=> $s_m2_check,
 		s_m2c_check		=> $s_m2c_check,
@@ -2630,7 +2649,7 @@ sub saveComm {
 
 	# Take care of the lists
 	# Enforce Ranges for variables that need it
-	$form->{commentlimit} = 0 if $form->{commentlimit} < 1;
+	$form->{commentlimit} = 1 if $form->{commentlimit} < 1;
 	my $cl_max = $constants->{comment_commentlimit} || 0;
 	$form->{commentlimit} = $cl_max if $cl_max > 0 && $form->{commentlimit} > $cl_max;
 	$form->{commentspill} = 0 if $form->{commentspill} < 1;
@@ -2662,10 +2681,6 @@ sub saveComm {
 			: $form->{d2_comment_q};
 
 	my $user_edits_table = {
-		# MC: More D2 neutring
-		#discussion2		=> $form->{discussion2} || undef,
-		#d2_comment_q		=> $form->{d2_comment_q} || undef,
-		#d2_comment_order	=> $form->{d2_comment_order} || undef,
 		clsmall			=> $form->{clsmall},
 		clsmall_bonus		=> ($clsmall_bonus || undef),
 		clbig			=> $form->{clbig},
@@ -2682,9 +2697,9 @@ sub saveComm {
 		posttype		=> $form->{posttype},
 		threshold		=> $form->{uthreshold},
 		nosigs			=> ($form->{nosigs}     ? 1 : 0),
-		reparent		=> ($form->{reparent}   ? 1 : 0),
+		highnew			=> ($form->{new}	? 1 : 0),
+		dimread			=> ($form->{dimmed}	? 1 : 0),
 		noscores		=> ($form->{noscores}   ? 1 : 0),
-		hardthresh		=> ($form->{hardthresh} ? 1 : 0),
 		no_spell		=> ($form->{no_spell}   ? 1 : undef),
 		nobonus			=> ($form->{nobonus} ? 1 : undef),
 		postanon		=> ($form->{postanon} ? 1 : undef),
@@ -2712,7 +2727,7 @@ sub saveComm {
 		reparent        => 1,
 		commentlimit    => 100,
 		commentspill    => 50,
-		mode            => 'improvedthreaded'
+		mode            => 'thread'
 	};
 
 	my $mod_reader = getObject("Slash::$constants->{m1_pluginname}", { db_type => 'reader' });
@@ -3004,7 +3019,7 @@ sub saveHome {
 		$slashdb->setUser($uid, $user_edits_table);
 	}
 
-	editHome({ uid => $uid, note => $note });
+	#editHome({ uid => $uid, note => $note });
 }
 
 #################################################################
@@ -3665,3 +3680,4 @@ createEnvironment();
 main();
 
 1;
+

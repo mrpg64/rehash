@@ -217,9 +217,11 @@ sub createSelect {
 	};
 
 	if ($return) {
-		return slashDisplay('select', $display, 1);
+		return selectMiscDefault($display);
+		#return slashDisplay('select', $display, 1);
 	} else {
-		slashDisplay('select', $display);
+		print selectMiscDefault($display);
+		#slashDisplay('select', $display);
 	}
 }
 
@@ -469,6 +471,8 @@ sub selectBreakthrough {
 	my($counts, $options) = @_;
 	my $constants = getCurrentStatic();
 	my $user = getCurrentUser();
+	my $form = getCurrentForm();
+	my $highlightthresh = defined($form->{highlightthresh}) ? $form->{highlightthresh} : $user->{highlightthresh};
 
 	my %data;
 	foreach my $c ($constants->{comment_minscore} .. $constants->{comment_maxscore}) {
@@ -478,7 +482,7 @@ sub selectBreakthrough {
 		}, { Return => 1, Nocomm => 1 });
 	}
 
-	$options->{default}	= $user->{highlightthresh} unless defined $options->{default};
+	$options->{default}	= $highlightthresh unless defined $options->{default};
 	$options->{'return'}	= 1                  unless defined $options->{'return'};
 	$options->{nsort}	= 1                  unless defined $options->{nsort};
 
@@ -611,6 +615,10 @@ sub linkStory {
 		}
 	}
 
+	if (defined($story_link->{linktop}) && $story_link->{linktop}){
+		$url .= "#commentwrap";
+	}
+	
 	my @extra_attrs_allowed = qw( title class id );
 	if ($render) {
 		my $rendered = '<a href="' . strip_attribute($url) . '"';
@@ -1084,13 +1092,20 @@ The 'linkCommentPages' template block.
 =cut
 
 sub linkCommentPages {
-	my($sid, $pid, $cid, $total) = @_;
+	my($sid, $pid, $cid, $total, $pages, $mode, $legacy) = @_;
+	my $threshold = getCurrentForm('threshold');
+	my $highlightthresh = getCurrentForm('highlightthresh');
 
 	return slashDisplay('linkCommentPages', {
 		sid	=> $sid,
 		pid	=> $pid,
 		cid	=> $cid,
+		threshold => $threshold,
+		highlightthresh => $highlightthresh,
 		total	=> $total,
+		tpages	=> $pages,
+		mode	=> $mode,
+		legacy	=> $legacy,
 	}, 1);
 }
 
@@ -1135,33 +1150,32 @@ The 'linkComment' template block.
 
 sub linkComment {
 	my($linkdata, $printcomment, $options) = @_;
-	my $constants = getCurrentStatic();
-	my $form = getCurrentForm();
 	my $user = getCurrentUser();
+	my $form = getCurrentForm();
 	my $adminflag = $user->{seclev} >= 10000 ? 1 : 0;
 
 	# don't inherit these ...
-	for (qw(sid cid pid date subject comment uid points lastmod
-		reason nickname fakeemail homepage sig)) {
-		$linkdata->{$_} = undef unless exists $linkdata->{$_};
-	}
+	# That's the exact opposite of what this actually does, dumbass. Nuked. --TMB
 
 	$linkdata->{pid}     = $linkdata->{original_pid} || $linkdata->{pid};
-	$linkdata->{comment} = $printcomment;
+	$linkdata->{comment} = defined($printcomment) && $printcomment ? $linkdata->{comment} : "";
+	
+	$linkdata->{threshold} = $form->{threshold} if defined($form->{threshold});
+	$linkdata->{highlightthresh} = $form->{highlightthresh} if defined($form->{highlightthresh});
+	$linkdata->{mode} = $form->{mode} if defined($form->{mode});
+	$linkdata->{commentsort} = $form->{commentsort} if defined($form->{commentsort});
+	$linkdata->{page} = $form->{page} if (!defined($linkdata->{page}) && defined($form->{page}));
 
 	if (!$options->{noextra}) {
 		%$linkdata = (%$linkdata,
 			adminflag	=> $adminflag,
 			date		=> $options->{date},
-			threshold	=> defined($linkdata->{threshold}) ? $linkdata->{threshold} : $user->{threshold},
-			highlightthresh	=> defined($linkdata->{highlightthresh}) ? $linkdata->{highlightthresh} : $user->{highlightthresh},
-			commentsort	=> $user->{commentsort},
-			mode		=> $user->{mode},
 		);
 	}
 
-	return _hard_linkComment($linkdata) if $constants->{comments_hardcoded};
-	slashDisplay('linkComment', $linkdata, { Return => 1, Nocomm => 1 });
+	# Damnit, don't use perl quirks in production code. Also, templates suck.
+	#return slashDisplay('linkComment', $linkdata, { Return => 1, Nocomm => 1 });
+	return linkCommentMiscDefault($linkdata);
 }
 
 #========================================================================
@@ -1367,51 +1381,6 @@ sub lockTest {
 		}
 	}
 	return $msg;
-}
-
-########################################################
-# this sucks, but it is here for now
-sub _hard_linkComment {
-	my($linkdata) = @_;
-	my $user = getCurrentUser();
-	my $constants = getCurrentStatic();
-	my $form = getCurrentForm();
-	my $gSkin = getCurrentSkin();
-
-	my $subject = $linkdata->{subject};
-
-	my $display = qq|<a |;
-	$display .= qq|id="$linkdata->{a_id}" |    if $linkdata->{a_id};
-	$display .= qq|class="$linkdata->{a_class}" | if $linkdata->{a_class};
-	$display .= qq|href="$gSkin->{rootdir}/comments.pl?sid=$linkdata->{sid}|;
-	$display .= "&amp;op=$linkdata->{op}" if defined($linkdata->{op});
-	$display .= "&amp;threshold=$linkdata->{threshold}" if defined($linkdata->{threshold});
-	$display .= "&amp;commentsort=$user->{commentsort}" if defined $linkdata->{commentsort};
-	$display .= "&amp;mode=$user->{mode}" if defined $linkdata->{mode};
-	$display .= "&amp;no_d2=1" if $user->{state}{no_d2} || $linkdata->{no_d2};
-	$display .= "&amp;startat=$linkdata->{startat}" if $linkdata->{startat};
-	$display .= "&amp;tid=$user->{state}{tid}"
-		if $constants->{tids_in_urls} && $user->{state}{tid};
-
-	if ($linkdata->{comment}) {
-		$display .= "&amp;cid=$linkdata->{cid}";
-	} else {
-		$display .= "&amp;pid=" . ($linkdata->{original_pid} || $linkdata->{pid});
-		$display .= "#$linkdata->{cid}" if $linkdata->{cid};
-	}
-
-	$display .= qq|" onclick="$linkdata->{onclick}| if $linkdata->{onclick};
-	$display .= qq|">$subject</a>|;
-	if (!$linkdata->{subject_only}) {
-		$display .= qq| by $linkdata->{nickname}|;
-		$display .= qq| (Score:$linkdata->{points})|
-			if !$user->{noscores} && $linkdata->{points};
-		$display .= " " . timeCalc($linkdata->{'time'}) 
-			if $linkdata->{date};
-	}
-	#$display .= "\n";
-
-	return $display;
 }
 
 #========================================================================
@@ -1718,6 +1687,103 @@ sub _slashComment {
 
 sub _slashJournal {
 	my($tokens, $token, $newtext) = @_;
+}
+
+sub selectMiscDefault {
+        my $args = shift;
+        my $html_out = '';
+        my $default_hr = {};
+
+        if(ref($args->{default}) eq 'HASH') {
+                $default_hr = $args->{default};
+        }
+        else {
+                $default_hr = { "$args->{default}" => 1 };
+        }
+
+        my $multiple = (defined($args->{multiple}) && $args->{multiple}) ? " MULTIPLE" : "";
+        my $onchange = (defined($args->{onchange}) && $args->{onchange}) ? " onchange=\"".strip_attribute($args->{onchange})."\"" : "";
+        my $onclick = (defined($args->{onclick}) && $args->{onclick}) ? " onclick=\"".strip_attribute($args->{onclick})."\"" : "";
+        $html_out .= "<select id=\"$args->{label}\" name=\"$args->{label}\"$multiple$onchange$onclick>\n";
+	my $fuckingperl = $args->{items};
+	my $ordered = $args->{ordered};
+        my @mylist = (defined($ordered) && $ordered) ? @$ordered :
+                (defined($args->{numeric}) && $args->{numeric}) ? sort {$a <=> $b} keys(%$fuckingperl) : sort keys(%$fuckingperl);
+
+        foreach my $item (@mylist) {
+
+                my $selected = defined($default_hr->{$item}) ? " selected" : "";
+                $html_out .= "<option value=\"$item\"$selected>".strip_literal($args->{items}->{$item})."</option>\n";
+        }
+
+        $html_out .= "</select>\n";
+
+        return $html_out;
+}
+
+sub linkCommentMiscDefault {
+	my $args = shift;
+	my $gSkin = getCurrentSkin();
+	my $user = getCurrentUser();
+	my $constants = getCurrentStatic();
+	my $html_out = "";
+
+	my $a_id = defined($args->{a_id}) ? " id=\"$args->{a_id}\"" : "";
+	my $a_class = defined($args->{a_class})  ? " class=\"$args->{a_class}\"" : "";
+	my $op = defined($args->{op}) ? "&amp;op=$args->{op}" : "";
+	my $commentsort = defined($args->{commentsort}) ? "&amp;commentsort=$args->{commentsort}" : "";
+	my $mode = defined($args->{mode}) ? "&amp;mode=$args->{mode}" : "";
+	my $threshold = defined($args->{threshold}) ? "&amp;threshold=$args->{threshold}" : "";
+	my $highlightthresh = defined($args->{highlightthresh}) ? "&amp;highlightthresh=$args->{highlightthresh}" : "";
+	my $startat = defined($args->{startat}) ? "&amp;startat=$args->{startat}" : "";
+	my $page = (defined($args->{page}) && !(defined($args->{subject}) && ($args->{subject} eq 'Reply' || $args->{subject} eq 'Reply to Article'))) ? "&amp;page=$args->{page}" : "";
+	my $tid = (defined($user->{state}->{tid}) && defined($constants->{tids_in_urls}) && $user->{state}->{tid} && $constants->{tids_in_urls}) ? "&amp;tid=$user->{state}->{tid}" : "";
+	my $a_onclick = defined($args->{onclick}) ? " onclick=\"$args->{onclick}\"" : "";
+	my ($cid, $pid, $tail) = ("", "", "");
+	
+	if(defined($args->{subject}) && $args->{subject} =~ /^#\d+$/) {
+		$cid = "&amp;cid=$args->{cid}";
+		$tail = "#commentwrap";
+	}
+	elsif(defined($args->{subject}) && $args->{subject} eq 'Parent') {
+		$cid = "&amp;cid=$args->{pid}";
+		$tail = "#$args->{pid}";
+	}
+	elsif(defined($args->{subject}) && $args->{subject} eq 'Reply to This') {
+		$pid = "&amp;pid=$args->{cid}";
+	}
+	if(defined($args->{op}) && lc($args->{op}) eq 'reply') {
+		$tail = "#post_comment";
+	}
+		if(defined($args->{linktop}) && lc($args->{linktop})) {
+		$tail = "#commentwrap";
+	}
+	
+	$html_out .= "<a$a_id$a_class href=\"$gSkin->{rootdir}/comments.pl?noupdate=1&amp;sid=$args->{sid}$op$commentsort$mode$threshold$highlightthresh$startat$page$tid$pid$cid$tail\"$a_onclick>".
+		strip_title($args->{subject}).
+		"</a>";
+
+	if(!defined($args->{subject_only}) || !$args->{subject_only}) {
+		if(defined($args->{nickname}) && $args->{nickname}) {
+			if(defined($args->{adminflag}) && $args->{adminflag}) {
+				$html_out .= " by <a href=\"$gSkin->{rootdir}/users.pl?op=userinfo&amp;fieldname=nickname&amp;userfield=".strip_paramattr(fixnickforlink($args->{nickname})).
+				"\">".strip_literal($args->{nickname})."</a>";
+			}
+			else {
+				$html_out .= " by ".strip_literal($args->{nickname});
+			}
+		}
+
+		if((!defined($user->{noscores}) || !$user->{noscores}) && defined($args->{points})) {
+			$html_out .= " (Score: $args->{points})";
+		}
+
+		if(defined($args->{date}) && $args->{date}) {
+			$html_out .= " ".timeCalc($args->{time})
+		}
+	}
+
+	return $html_out;	
 }
 
 # sigh ... we had to change one line of TokeParser rather than

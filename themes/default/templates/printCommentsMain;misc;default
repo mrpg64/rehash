@@ -28,7 +28,7 @@ __template__
 	<div class="article">
 		[% PROCESS titlebar title="<a href=\"$stripped_link\">$stripped_title</a>" %]
 		<div class="details">
-				Journal by <a href="[% constants.real_rootdir %]/~[% parent.author.nickname | strip_paramattr %]/journal">[% parent.author.nickname | strip_literal %]</a>
+				Journal by <a href="[% constants.real_rootdir %]/~[% parent.author.nickname | fixnickforlink | strip_paramattr %]/journal">[% parent.author.nickname | strip_literal %]</a>
 		</div>
 		<div class="body">
 			<div class="intro">[% parent.content %]</div>
@@ -47,7 +47,7 @@ __template__
 				[% IF parent.author.homepage %]
 					<a href="[% parent.author.homepage %]">[% parent.author.nickname | strip_literal %]</a>
 				[% ELSE %]
-					<a href="[% constants.real_rootdir %]/~[% parent.author.nickname | strip_paramattr %]/">	[% parent.author.nickname | strip_literal %]</a>
+					<a href="[% constants.real_rootdir %]/~[% parent.author.nickname | fixnickforlink | strip_paramattr %]/">	[% parent.author.nickname | strip_literal %]</a>
 				[% END %]
 				[% parent.story.atstorytime %]
 				[% IF constants.plugin.Print %] 
@@ -109,7 +109,6 @@ __template__
 			}); END %]
 		[% IF user.points; modpoints; END %]
 		[% IF count %]| <b>[% count %]</b> comments[% END %]
-		[% IF lvl && user.mode == 'thread' %]([% spilltext %]) | Index Only[% END %]
 		[% IF sid && form.startat %]| Starting at #[% form.startat %][% END %]
 		| <a href="[% gSkin.rootdir %]/search.pl?op=comments&amp;sid=[% sid %]">Search Discussion</a>
 	</div>
@@ -119,33 +118,43 @@ __template__
 			<fieldset>
 				<legend>Display Options</legend>
 				 
-				Threshold/Breakthrough: [%
-					Slash.selectThreshold(comments.0.totals);
-					Slash.selectBreakthrough(comments.0.totals);
-					IF user.mode != 'parents' && user.mode != 'child';
-						Slash.selectMode(user.mode);
-					END;
-					Slash.selectSortcode(user.commentsort) %]
-			 
-				[% UNLESS user.is_anon %]
+				[% IF user.mode != 'threadtng' %]
+						Threshold/Breakthrough [%
+						Slash.selectThreshold(comments.0.totals);
+				ELSE %]Breakthrough
+						<input type="hidden" name="threshold" value="[% user.threshold %]">
+				[% END;
+				Slash.selectBreakthrough(comments.0.totals);
+				IF user.mode != 'parents' && user.mode != 'child';
+					Slash.selectMode(user.mode);
+				END;
+				Slash.selectSortcode(user.commentsort);
+				
+				UNLESS user.is_anon %]
 					Save: <input type="checkbox" name="savechanges" class="button">
 				[%- END %]
 				<input type="submit" name="op" value="Change" class="button">
 				<input type="hidden" name="sid" value="[% sid %]">
+				<input type="hidden" name="page" value="[% page %]">
 				<input type="hidden" name="noupdate" value="1">
 				[% IF cid %]<input type="hidden" name="cid" value="[% cid %]">[% reply = 'Reply to Comment'; END %]
 				[% IF pid %]<input type="hidden" name="pid" value="[% pid %]">[% END %]
 				[% IF form.startat %]<input type="hidden" name="startat" value="[% form.startat %]">[% END %]
 				[% UNLESS user.state.discussion_archived || user.state.discussion_future_nopost %]
-					<span class="nbutton"><p><b>[% Slash.linkComment({
+					<span class="nbutton"><b>[% Slash.linkComment({
 						sid          => sid,
 						pid          => cid,
 						op           => 'reply',
 						subject      => reply,
 						subject_only => 1,
-					}) %]</b></p></span>
+					}) %]</b></span>
 				[% END %]
-				 <span class="nbutton"><p><b><a href="[% stripped_link %]">Mark All as Read</a></b></p></span>
+				 <span class="nbutton"><b><a href="[% stripped_link %]">Mark All as Read</a></b></span>
+				[% IF parent.type == 'journal' %]
+						<span class="nbutton"><b><a href="[% stripped_link %]?markunread=1">Mark All as Unread</a></b></span>
+				[% ELSE %]
+						<span class="nbutton"><b><a href="[% stripped_link %]&markunread=1">Mark All as Unread</a></b></span>
+				[% END %]
 			</fieldset>
 		</form>
 		<div class="commentBox">

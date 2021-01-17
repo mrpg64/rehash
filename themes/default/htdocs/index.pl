@@ -278,33 +278,13 @@ my $start_time = Time::HiRes::time;
 	my $title = getData('head', { skin => $skin_name });
 	header({ title => $title, link => $linkrel }, $skin_name) or return;
 
-	if ($form->{remark}
-		&& $user->{is_subscriber}
-		&& $form->{sid})
-	{
-		my $sid = $form->{sid};
-		my $story = $slashdb->getStory($sid);
-		my $remark = $form->{remark};
-		# If what's pasted in contains a substring that looks
-		# like a sid, yank it out and just use that.
-		my $targetsid = getSidFromRemark($remark);
-		$remark = $targetsid if $targetsid;
-		if ($story) {
-			my $remarks = getObject('Slash::Remarks');
-			$remarks->createRemark($remark, {
-				uid	=> $user->{uid},
-				stoid	=> $story->{stoid}
-			});
-			print getData('remark_thanks');
-		}
-	}
 
 	my $metamod_elig = 0;
 	if ($constants->{m2}) {
 		my $metamod_reader = getObject('Slash::Metamod', { db_type => 'reader' });
 		$metamod_elig = $metamod_reader->metamodEligible($user);
 	}
-	my $return_url = "//".$ENV{HTTP_HOST}.$ENV{REQUEST_URI};
+	my $return_url = $gSkin->{rootdir};
 	
 	slashDisplay('index', {
 		metamod_elig	=> $metamod_elig,
@@ -459,12 +439,6 @@ sub getDispModeForStory {
 	
 }
 
-sub getSidFromRemark {
-	my($remark) = @_;
-	my $regex = regexSid();
-	my($sid) = $remark =~ $regex;
-	return $sid || '';
-}
 
 sub do_rss {
 	my($reader, $constants, $user, $form, $stories, $gSkin) = @_;
@@ -674,11 +648,6 @@ sub displayStories {
 			if $dispmodelast eq "brief"
 				&& !( $other->{dispmode} && $other->{dispmode} eq "brief" );
 
-		$story->{commentcount} = $threshComments[0] if $story->{commentcount};
-
-		$other->{thresh_commentcount} = $user->{threshold} > -1
-			? $threshComments[$user->{threshold} + 1]
-			: $story->{commentcount};
 
 		$tmpreturn .= displayStory($story->{sid}, '', $other, $stories_data_cache);
 		
@@ -731,7 +700,8 @@ sub displayStories {
 				sid		=> $story->{sid},
 				tid		=> $story->{tid},
 				'link'		=> $story->{commentcount} || 0,
-				skin		=> $story->{primaryskid}
+				skin		=> $story->{primaryskid},
+				linktop	=> 1
 			}, '', $ls_other);
 
 			push @commentcount_link, $thresh, ($story->{commentcount} || 0);
@@ -754,9 +724,9 @@ sub displayStories {
 	
 			if ($user->{seclev} >= 100) {
 				push @links, [ "$gSkin->{rootdir}/admin.pl?op=edit&sid=$story->{sid}", getData('edit'), '', 'edit' ];
-				if ($constants->{plugin}{Ajax}) {
-					my $signoff =  slashDisplay("signoff", { stoid => $story->{stoid}, storylink => 1 }, { Return => 1 } ); 
-					push @links, $signoff;
+				my $signed = $reader->hasUserSignedStory($story->{stoid}, $user->{uid});
+				unless ($signed) {
+					push @links, [ "$gSkin->{rootdir}/admin.pl?op=edit&sid=$story->{sid}", getData('nosign'), '', 'edit' ];
 				}
 			}
 

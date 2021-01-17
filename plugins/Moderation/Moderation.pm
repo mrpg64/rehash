@@ -68,76 +68,6 @@ sub getReasonsOrder {
 	return $self->{$order_cache};
 }
 
-########################################################
-
-# to-do:
-#
-# db down
-# allow moderation
-# archived (done)
-# -1 == no points
-# -2 == not enough points
-# already posted
-# $slashdb->setStory($discussion->{sid}, { writestatus => 'dirty' });
-
-sub ajaxModerateCid {
-	my($slashdb, $constants, $user, $form, $options) = @_;
-	my $self = getObject('Slash::' . $constants->{m1_pluginname});
-	my $cid = $form->{cid} or return;
-	my $sid = $form->{sid} or return;
-	my $reason = $form->{reason} or return;
-
-	my $score  = "comment_score_$cid";
-	my $select = "reasondiv_$cid";
-
-	my $html = {};
-	my $error;
-
-	my $discussion = $self->getDiscussion($sid);
-	my $moderate_check = $self->moderateCheck($form, $user, $constants, $discussion);
-
-	if ($moderate_check->{msg}) {
-		$html->{$select} = $moderate_check->{msg};
-	} elsif ($moderate_check->{count}) {
-		$html->{$select} = $moderate_check->{msg};
-	} else {
-		# XXX this should be in templates -- pudge
-		my $ret_val = $self->moderateComment($sid, $cid, $reason, { no_display => 1 });
-		if ($ret_val > 0) {
-			my $comment = $self->getComment($cid) or return;
-			my $reasons = $self->getReasons or return;
-			my $points = getPoints(
-				$comment, $user,
-				$constants->{comment_minscore}, $constants->{comment_maxscore},
-				$self->countUsers({ max => 1 }), $self->getReasons
-			);
-
-			$html->{$score}  = "Score:$points";
-			$html->{$score} = qq[<a href="#" onclick="getModalPrefs('modcommentlog', 'Moderation Comment Log', $cid); return false">$html->{$score}</a>]
-				if $constants->{modal_prefs_active} && !$user->{is_anon};
-			$html->{$score} .= ", $reasons->{$comment->{reason}}{name}"
-				if $comment->{reason} && $reasons->{$comment->{reason}};
-			$html->{$score} = "($html->{$score})";
-
-			my $ptstr = $user->{points} == 1 ? 'point' : 'points';
-			$html->{$select} = "Moderated '$reasons->{$reason}{name}.'  $user->{points} $ptstr left.";
-			$self->setStory($sid, { writestatus => 'dirty' });
-
-		} elsif (!$ret_val) {
-			$html->{$select} = "Error: No moderation performed.";
-
-		} elsif ($ret_val == -1 || $ret_val == -2) {
-			$html->{$select} = "Error: $user->{points} moderation points left.";
-		}
-	}
-
-	$options->{content_type} = 'application/json';
-	return Data::JavaScript::Anon->anon_dump({
-		html    => $html,
-		error   => $error,
-	});
-}
-
 ##################################################################
 # moderateComment
 #
@@ -918,7 +848,9 @@ sub moderateCheck {
 
 	if ($discussion->{type} eq 'archived' &&
 	   !$constants->{comments_moddable_archived} &&
-	   !$form->{meta_mod_only}) {
+	   !$form->{meta_mod_only} &&
+	   !($constants->{authors_unlimited} && $user->{seclev} >= $constants->{authors_unlimited}) #Allow god mode mods on old stories
+	   ) {
 		return { msg => Slash::Utility::Comments::getError('archive_error') };
 	}
 
@@ -1523,6 +1455,18 @@ sub undoSingleModeration {
 	$rows = $self->sqlUpdate("comments", $comm_update, "cid=$mod->{cid}");
 	
 	print STDERR "\nWTF comment adjust fail\n" unless $rows;
+
+	# Adjust comment karma as well. This is where ipid and subnetid karma
+	# get stored.
+	
+	my $comm_karma_adj = $self->sqlSelect("karma", "modreasons", "id = $mod->{reason}");
+	$rows = $self->sqlUpdate(
+		"comments",
+		"karma = karma - $comm_karma_adj, karma_abs = abs(karma)",
+		"cid=$mod->{cid}"
+	);
+	
+	print STDERR "\nWTF comment karma adjust fail\n" unless $rows;
 
 	return 1;
 	

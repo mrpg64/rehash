@@ -55,10 +55,12 @@ __template__
 			'soylentnews'	=> 'SoylentNews',
 			'night' => 'Night Mode',
 			'icicle' => 'Black IcIcle',
+			'nv' => 'NV',
 			'pwnies' => 'OMG PWNIES',
+			'vomit'  => 'Vomit',
 			'vt100'	=> 'VT100',
 			'vt220' => 'VT220',
-			'grayscale' => 'Grayscale'
+			'grayscale' => 'Grayscale',
 		}, user_edit.skin, 1);
 		%]
 		<label>
