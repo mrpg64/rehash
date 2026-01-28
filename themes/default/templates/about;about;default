@@ -15,7 +15,7 @@ __template__
 <div id="about">
 	[% PROCESS titlebar title => 'About ' _ constants.sitename %]
 	<div class="generalbody">
-		<p>We are a volunteer-powered news aggregation site that deliver articles about technology, science, and general interest. We also host public discussion and utilize a powerful comment moderation system. This is an open-source, community-driven project and evolves based on the will of the community.</p>
+		<p>We are a volunteer-powered news aggregation site that delivers articles about technology, science, and general interest. We also host public discussion and utilize a powerful comment moderation system. This is an open-source, community-driven project and evolves based on the will of the community.</p>
 		<p>We've incorporated as a Delaware Public Benefit Corporation (similar to a non-profit) as we feel our mission to provide a platform for news dissemination and relevant discussion is not only essential for mankind, but also a legal right (i.e. freedom of press, freedom of speech) at least in the USA, and these are liberties which we aim to protect.</p>
 		<p>Now, go forth and submit stories, comment, moderate, and be free!</p>
 		<h3>Useful Links:</h3>
