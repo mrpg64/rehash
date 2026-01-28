@@ -22,7 +22,7 @@ __template__
 		<h3 id="why">Why should I subscribe?</h3>
 		<p>Besides the warm fuzzy feeling that you helped us out, here's the rundown of subscription features:</p><ul> <li>Subscriber badge (toggleable)</li><li>Early access to new features</li><li>Exemption from ads if we ever run any</li><li>Full comment histories</li><li>Access to database-intensive operations</li><li>No rate limiting or spam filtering</li></ul></p>
 		
-		<h3 id="ac">Can I subscribe without an SoylentNews account?</h3>
+		<h3 id="ac">Can I subscribe without a SoylentNews account?</h3>
 		<p>Unfortunately Anonymous Cowards can not buy a subscription for themselves, but you can, as an AC, gift a subscription to a user.  The default is set up to NCommander's spare account, but you can change this to any user you wish (other than the AC account).</p>
 		
 		<h3 id="money">So you are just in it for the money?</h3>
